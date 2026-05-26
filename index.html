@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETPRIME - ULTRA AUTO SYSTEM</title>
+  <style>
+    body {
+      background-color: #060709;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 12px;
+      text-align: center;
+    }
+    .main-card {
+      background: #12141c;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid #E50914;
+      box-shadow: 0 4px 20px rgba(229, 9, 20, 0.2);
+      margin-bottom: 15px;
+    }
+    h1 {
+      color: #E50914;
+      font-size: 24px;
+      margin: 0 0 5px 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 900;
+    }
+    .sub-title {
+      color: #FFD700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    .input-group {
+      margin-bottom: 12px;
+    }
+    input[type="text"] {
+      width: 90%;
+      max-width: 320px;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #1a1d29;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      text-align: center;
+    }
+    input[type="text"]:focus {
+      border-color: #E50914;
+    }
+    .btn-grid {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      max-width: 340px;
+      margin: 10px auto 0 auto;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+    .movie-btn {
+      background: linear-gradient(135deg, #E50914, #b20710);
+      color: #fff;
+    }
+    .tv-btn {
+      background: linear-gradient(135deg, #0099ff, #0055cc);
+      color: #fff;
+    }
+    .player-box {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #1a1d29;
+      margin-top: 15px;
+    }
+    .player-box iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .info-text {
+      color: #ffcc00;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .msg-zone {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(229, 9, 20, 0.05);
+      border-radius: 8px;
+      border: 1px dashed #E50914;
+    }
+    .msg-zone p {
+      margin: 4px 0;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .insta-link {
+      display: inline-block;
+      width: 90%;
+      max-width: 290px;
+      padding: 12px 0;
+      background: linear-gradient(45deg, #f09433, #dc2743, #bc1888);
+      color: #ffffff !important;
+      font-weight: bold;
+      font-size: 14px;
+      border-radius: 25px;
+      text-transform: uppercase;
+      border: 1px solid #fff;
+      text-decoration: none;
+      margin-top: 15px;
+      box-shadow: 0 4px 10px rgba(220, 39, 67, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-card">
+    <h1>NETPRIME</h1>
+    <div class="sub-title">Movies & TV Shows</div>
+    
+    <div class="input-group">
+      <input type="text" id="queryInput" placeholder="Movie Name Ya IMDb ID Dalein...">
+    </div>
+    
+    <div class="btn-grid">
+      <button class="movie-btn" onclick="startMovie()">▶️ Play Movie</button>
+      <button class="tv-btn" onclick="startSeries()">📺 Play Series</button>
+    </div>
+  </div>
+
+  <div class="player-box">
+    <iframe id="mainPlayer" src="https://vidsrc.cc/v2/embed/movie/tt2294965" allowfullscreen="true" scrolling="no" allow="autoplay; encrypted-media"></iframe>
+  </div>
+
+  <div class="info-text">
+    💡 Tip: Agar video na chale, toh Player ke andar se "Server" badlein!
+  </div>
+
+  <div class="msg-zone">
+    <p style="color: #ffcc00; font-family: sans-serif;">اپنی پسند کی مووی ڈلوانے کے لیے انسٹاگرام پر میسیج کریں۔</p>
+    <p style="color: #ffffff; font-family: sans-serif;">Apni Pasand Ki Movie Dalwane Ke Liye Message Karein.</p>
+  </div>
+
+  <a href="https://www.instagram.com/net_prime_02?igsh=ZmIzZ3djNTg2YmR3" target="_blank" class="insta-link">
+    📸 Message on Instagram
+  </a>
+
+  <script>
+    function startMovie() {
+      var val = document.getElementById('queryInput').value.trim();
+      if(val == "") { alert("Bhai, pehle Movie ka Naam ya IMDb ID toh dalo!"); return; }
+      
+      if(val.toLowerCase().startsWith('tt')) {
+        document.getElementById('mainPlayer').src = "https://vidsrc.cc/v2/embed/movie/" + val;
+      } else {
+        document.getElementById('mainPlayer').src = "https://vidsrc.cc/v2/embed/movie?title=" + encodeURIComponent(val);
+      }
+    }
+
+    function startSeries() {
+      var val = document.getElementById('queryInput').value.trim();
+      if(val == "") { alert("Bhai, pehle Series ka Naam ya ID dalo!"); return; }
+      
+      if(val.toLowerCase().startsWith('tt')) {
+        document.getElementById('mainPlayer').src = "https://vidsrc.cc/v2/embed/tv/" + val + "/1/1";
+      } else {
+        document.getElementById('mainPlayer').src = "https://vidsrc.cc/v2/embed/tv?title=" + encodeURIComponent(val) + "&s=1&e=1";
+      }
+    }
+  </script>
+
+</body>
+</html>
