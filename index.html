@@ -2,208 +2,68 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eSports RDX - Free Fire Tournaments</title>
+    <title>eSports RDX - Admin Panel</title>
     <style>
-        :root {
-            --bg-color: #0b0e14;
-            --card-bg: #161b22;
-            --gold: #d29922;
-            --green: #2ea44f;
-            --red: #da3633;
-            --text-white: #ffffff;
-            --text-gray: #8b949e;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-white);
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        header {
-            background: var(--card-bg);
-            padding: 15px;
-            text-align: center;
-            border-bottom: 2px solid var(--gold);
-        }
-        h1 { color: var(--gold); margin: 0; font-size: 24px; }
-        .container { padding: 15px; max-width: 600px; margin: auto; }
-        .btn {
-            background: var(--gold);
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-        }
-        .btn-green { background: var(--green); color: #fff; }
-        .btn-red { background: var(--red); color: #fff; }
-        .match-card {
-            background: var(--card-bg);
-            border: 1px solid #30363d;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            color: #fff;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-        .banner-box {
-            width: 100%;
-            height: 120px;
-            background: #21262d;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--gold);
-            font-weight: bold;
-        }
+        body { background: #0b0e14; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
+        .box { background: #161b22; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #30363d; }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: #fff; box-sizing: border-box; }
+        .btn { background: #d29922; color: #000; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>🎮 eSports RDX</h1>
-    </header>
-
-    <div class="container">
-        <!-- Banner Section -->
-        <div class="banner-box" id="bannerContainer">eSports RDX Banner Area</div>
-
-        <!-- Login Section -->
-        <div id="authSection" class="match-card" style="text-align: center;">
-            <h3>Login to Join Tournaments</h3>
-            <button class="btn btn-green" onclick="loginWithGoogle()">Login with Google</button>
-        </div>
-
-        <!-- User Info Section -->
-        <div id="userSection" class="match-card" style="display:none;">
-            <p>Welcome, <span id="userName" style="color: var(--gold); font-weight:bold;"></span></p>
-            <p>Wallet Balance: ₹<span id="userWallet" style="color: var(--green); font-weight:bold;">0</span></p>
-            <button class="btn btn-red" onclick="logout()">Logout</button>
-        </div>
-
-        <!-- Search Bar -->
-        <input type="text" id="searchMatch" placeholder="Search Match by Title or ID..." onkeyup="filterMatches()">
-
-        <h2>Live & Upcoming Matches</h2>
-        <div id="matchesList">Loading matches...</div>
+    <div id="loginBox" class="box">
+        <h2>Admin Login</h2>
+        <input type="password" id="adminPass" placeholder="Enter Password (9522)">
+        <button class="btn" onclick="checkAdmin()">Login</button>
     </div>
 
-    <!-- Firebase SDKs -->
+    <div id="adminPanel" class="box" style="display:none;">
+        <h2>Admin Control Panel</h2>
+        <h3>Create Match</h3>
+        <input type="text" id="mTitle" placeholder="Match Title">
+        <input type="text" id="mId" placeholder="Match ID">
+        <input type="number" id="mFee" placeholder="Entry Fee">
+        <input type="number" id="mPrize" placeholder="Win Prize">
+        <input type="text" id="mTime" placeholder="Match Time">
+        <input type="text" id="mRoom" placeholder="Room ID & Password">
+        <button class="btn" onclick="createMatch()">Publish Match</button>
+    </div>
+
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <script>
-        // Aapki Firebase Config (ad-g-55646 wali details yahan bharein)
         const firebaseConfig = {
             apiKey: "APNA_FIREBASE_API_KEY_YAHAN_DAALEIN",
             authDomain: "ad-g-55646.firebaseapp.com",
-            projectId: "ad-g-55646",
-            storageBucket: "ad-g-55646.appspot.com",
-            messagingSenderId: "519103871395",
-            appId: "APNA_APP_ID_YAHAN_DAALEIN"
+            projectId: "ad-g-55646"
         };
-
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.firestore();
 
-        function loginWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch((error) => {
-                alert(error.message);
-            });
-        }
-
-        function logout() {
-            auth.signOut();
-        }
-
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                document.getElementById('authSection').style.display = 'none';
-                document.getElementById('userSection').style.display = 'block';
-                document.getElementById('userName').innerText = user.displayName;
-                loadUserData(user.uid);
+        function checkAdmin() {
+            let pass = document.getElementById('adminPass').value;
+            if (pass === "9522") {
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
             } else {
-                document.getElementById('authSection').style.display = 'block';
-                document.getElementById('userSection').style.display = 'none';
+                alert("Wrong Password!");
             }
-        });
-
-        function loadUserData(uid) {
-            db.collection("users").doc(uid).get().then((doc) => {
-                if (doc.exists) {
-                    document.getElementById('userWallet').innerText = doc.data().wallet || 0;
-                } else {
-                    db.collection("users").doc(uid).set({ wallet: 0, email: auth.currentUser.email });
-                }
-            });
         }
 
-        // Load Matches
-        db.collection("matches").onSnapshot((snapshot) => {
-            let listHTML = "";
-            snapshot.forEach((doc) => {
-                let m = doc.data();
-                listHTML += `
-                    <div class="match-card">
-                        <h3 style="color:var(--gold);">${m.title} (ID: ${m.matchId})</h3>
-                        <p>Entry Fee: ₹${m.entryFee} | Win Prize: ₹${m.prize}</p>
-                        <p>Time: ${m.time}</p>
-                        <p>Room ID & Pass: <b>${m.roomDetails || "Match shuru hone se pehle milegi"}</b></p>
-                        <button class="btn btn-green" onclick="joinMatch('${doc.id}', ${m.entryFee})">Join Match (FF ID)</button>
-                    </div>
-                `;
+        function createMatch() {
+            db.collection("matches").add({
+                title: document.getElementById('mTitle').value,
+                matchId: document.getElementById('mId').value,
+                entryFee: Number(document.getElementById('mFee').value),
+                prize: Number(document.getElementById('mPrize').value),
+                time: document.getElementById('mTime').value,
+                roomDetails: document.getElementById('mRoom').value
+            }).then(() => {
+                alert("Match Created Successfully!");
             });
-            document.getElementById('matchesList').innerHTML = listHTML;
-        });
-
-        function joinMatch(matchId, entryFee) {
-            let user = auth.currentUser;
-            if (!user) {
-                alert("Pehle Login karein!");
-                return;
-            }
-            let ffId = prompt("Apni Free Fire ID enter karein:");
-            if (!ffId) return;
-
-            db.collection("users").doc(user.uid).get().then((doc) => {
-                let wallet = doc.data().wallet || 0;
-                if (wallet < entryFee) {
-                    alert("Wallet me balance kam hai!");
-                    return;
-                }
-                // Deduct balance and join
-                db.collection("users").doc(user.uid).update({ wallet: wallet - entryFee });
-                db.collection("joins").add({
-                    matchId: matchId,
-                    userId: user.uid,
-                    ffId: ffId,
-                    timestamp: Date.now()
-                }).then(() => {
-                    alert("Match successfully joined!");
-                });
-            });
-        }
-
-        function filterMatches() {
-            // Search logic here
         }
     </script>
 </body>
