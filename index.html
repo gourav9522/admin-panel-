@@ -10,6 +10,7 @@
         .btn { background: #d29922; color: #000; font-weight: bold; cursor: pointer; }
         .btn-green { background: #2ea44f; color: #fff; }
         .btn-red { background: #da3633; color: #fff; }
+        .user-card { background: #21262d; padding: 10px; margin-top: 8px; border-radius: 5px; border: 1px solid #30363d; }
     </style>
 </head>
 <body>
@@ -50,18 +51,16 @@
             <div id="adminMatchesList">Loading matches...</div>
         </div>
 
-        <!-- Manage Withdrawals & Deposits -->
+        <!-- ALL USERS MANAGEMENT (NEW) -->
+        <div class="box">
+            <h3>Registered Users & Coin Management</h3>
+            <div id="allUsersList">Loading users...</div>
+        </div>
+
+        <!-- Manage Withdrawals -->
         <div class="box">
             <h3>Withdrawal & Deposit Requests</h3>
             <div id="requestsList">Loading requests...</div>
-        </div>
-
-        <!-- Manual Coin Addition -->
-        <div class="box">
-            <h3>Add Coins to User</h3>
-            <input type="text" id="targetUserId" placeholder="User UID">
-            <input type="number" id="addCoinAmount" placeholder="Amount to Add">
-            <button class="btn btn-green" onclick="addCoinsToUser()">Add Coins</button>
         </div>
     </div>
 
@@ -107,19 +106,18 @@
                 status: "active"
             }).then(() => {
                 alert("Match Created!");
-                loadAdminData();
             });
         }
 
         function loadAdminData() {
-            // Matches
+            // 1. Matches List
             db.collection("matches").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
                     let m = doc.data();
                     html += `
                         <p><b>${m.title}</b> (ID: ${m.matchId}) | Status: ${m.status}</p>
-                        <button class="btn btn-green" onclick="markComplete('${doc.id}')">Mark Complete / Successful</button>
+                        <button class="btn btn-green" onclick="markComplete('${doc.id}')">Mark Complete</button>
                         <button class="btn btn-red" onclick="deleteMatch('${doc.id}')">Delete Match</button>
                         <hr style="border-color:#30363d">
                     `;
@@ -127,7 +125,26 @@
                 document.getElementById('adminMatchesList').innerHTML = html;
             });
 
-            // Withdrawals
+            // 2. All Users List (NEW)
+            db.collection("users").onSnapshot(snapshot => {
+                let html = "";
+                snapshot.forEach(doc => {
+                    let u = doc.data();
+                    let uid = doc.id;
+                    html += `
+                        <div class="user-card">
+                            <p><b>Name:</b> ${u.name || 'N/A'}</p>
+                            <p><b>Email:</b> ${u.email}</p>
+                            <p><b>Coins/Wallet:</b> ₹<span id="wallet-${uid}">${u.wallet || 0}</span></p>
+                            <input type="number" id="add-amt-${uid}" placeholder="Enter coins to add/subtract" style="margin:4px 0;">
+                            <button class="btn btn-green" onclick="updateUserCoins('${uid}')">Add Coins</button>
+                        </div>
+                    `;
+                });
+                document.getElementById('allUsersList').innerHTML = html || "No users found.";
+            });
+
+            // 3. Withdrawals List
             db.collection("withdrawals").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
@@ -155,21 +172,25 @@
         function markWithdrawalSuccess(id) {
             db.collection("withdrawals").doc(id).update({ status: "Success (Paid)" }).then(() => {
                 alert("Marked as Successful!");
-                // Auto delete history logic or tracker can be hooked here after 3 hours
             });
         }
 
-        function addCoinsToUser() {
-            let uid = document.getElementById('targetUserId').value;
-            let amt = Number(document.getElementById('addCoinAmount').value);
+        function updateUserCoins(uid) {
+            let inputVal = document.getElementById(`add-amt-${uid}`).value;
+            let amountToAdd = Number(inputVal);
+            if(!amountToAdd) {
+                alert("Please enter a valid amount!");
+                return;
+            }
+
             db.collection("users").doc(uid).get().then(doc => {
                 if(doc.exists) {
                     let currentWallet = doc.data().wallet || 0;
-                    db.collection("users").doc(uid).update({ wallet: currentWallet + amt }).then(() => {
-                        alert("Coins added successfully!");
+                    let newWallet = currentWallet + amountToAdd;
+                    db.collection("users").doc(uid).update({ wallet: newWallet }).then(() => {
+                        alert("Coins updated successfully!");
+                        document.getElementById(`add-amt-${uid}`).value = "";
                     });
-                } else {
-                    alert("User UID not found!");
                 }
             });
         }
