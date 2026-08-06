@@ -32,13 +32,14 @@
             <button class="btn btn-green" onclick="updateBanner()">Update Banner</button>
         </div>
 
-        <!-- Create Match -->
+        <!-- Create Match with Seats Limit -->
         <div class="box">
-            <h3>Create Match</h3>
-            <input type="text" id="mTitle" placeholder="Match Title">
+            <h3>Create Match (Seat Limit Added)</h3>
+            <input type="text" id="mTitle" placeholder="Match Title (e.g. 1v1 Custom)">
             <input type="text" id="mId" placeholder="Match ID">
             <input type="number" id="mFee" placeholder="Entry Fee">
             <input type="number" id="mPrize" placeholder="Win Prize">
+            <input type="number" id="mSlots" placeholder="Max Seats / Slots (e.g. 60)">
             <input type="text" id="mWinRate" placeholder="Win Rate (e.g. 75%)">
             <input type="text" id="mTime" placeholder="Match Time">
             <input type="text" id="mPhoto" placeholder="Match Photo Link">
@@ -100,7 +101,7 @@
             let url = document.getElementById('bannerUrlInput').value;
             db.collection("settings").doc("config").set({ bannerUrl: url }, { merge: true }).then(() => {
                 alert("Banner Updated!");
-            }).catch(err => alert(err.message));
+            });
         }
 
         function createMatch() {
@@ -116,94 +117,61 @@
                 matchId: matchId,
                 entryFee: Number(document.getElementById('mFee').value) || 0,
                 prize: Number(document.getElementById('mPrize').value) || 0,
+                maxSlots: Number(document.getElementById('mSlots').value) || 60,
                 winRate: document.getElementById('mWinRate').value || "50%",
                 time: document.getElementById('mTime').value || "Soon",
                 photoUrl: document.getElementById('mPhoto').value || "",
                 roomDetails: document.getElementById('mRoom').value || "Pending",
-                status: "active",
-                createdAt: Date.now()
+                status: "active"
             }).then(() => {
-                alert("Match Created Successfully!");
-                document.getElementById('mTitle').value = "";
-                document.getElementById('mId').value = "";
-                document.getElementById('mFee').value = "";
-                document.getElementById('mPrize').value = "";
-                document.getElementById('mWinRate').value = "";
-                document.getElementById('mTime').value = "";
-                document.getElementById('mPhoto').value = "";
-                document.getElementById('mRoom').value = "";
-            }).catch(err => alert("Error: " + err.message));
+                alert("Match Created Successfully with Seat Limit!");
+            }).catch(err => alert(err.message));
         }
 
         function loadAdminData() {
-            // 1. Matches List
             db.collection("matches").onSnapshot(snapshot => {
                 let html = "";
-                if(snapshot.empty) {
-                    html = "<p>No matches created yet.</p>";
-                }
                 snapshot.forEach(doc => {
                     let m = doc.data();
                     html += `
-                        <p><b>${m.title}</b> (ID: ${m.matchId}) | Status: ${m.status}</p>
-                        <p style="font-size:12px; color:#8b949e;">Fee: ₹${m.entryFee} | Prize: ₹${m.prize} | Room: ${m.roomDetails}</p>
+                        <p><b>${m.title}</b> (ID: ${m.matchId}) | Max Slots: ${m.maxSlots || 60}</p>
                         <button class="btn btn-green" onclick="markComplete('${doc.id}')">Mark Complete</button>
                         <button class="btn btn-red" onclick="deleteMatch('${doc.id}')">Delete Match</button>
                         <hr style="border-color:#30363d">
                     `;
                 });
-                document.getElementById('adminMatchesList').innerHTML = html;
+                document.getElementById('adminMatchesList').innerHTML = html || "<p>No matches.</p>";
             });
 
-            // 2. All Users List & Coin Management
             db.collection("users").onSnapshot(snapshot => {
                 let html = "";
-                if(snapshot.empty) {
-                    html = "<p>No users registered yet.</p>";
-                }
                 snapshot.forEach(doc => {
                     let u = doc.data();
                     let uid = doc.id;
                     html += `
                         <div class="user-card">
                             <p><b>Name:</b> ${u.name || 'N/A'}</p>
-                            <p><b>Email:</b> ${u.email || 'N/A'}</p>
+                            <p><b>Email:</b> ${u.email}</p>
                             <p><b>Coins/Wallet:</b> ₹<span id="wallet-${uid}">${u.wallet || 0}</span></p>
-                            <input type="number" id="add-amt-${uid}" placeholder="Enter coins to add/subtract" style="margin:4px 0;">
-                            <button class="btn btn-green" onclick="updateUserCoins('${uid}')">Add/Update Coins</button>
+                            <input type="number" id="add-amt-${uid}" placeholder="Enter coins to add" style="margin:4px 0;">
+                            <button class="btn btn-green" onclick="updateUserCoins('${uid}')">Add Coins</button>
                         </div>
                     `;
                 });
-                document.getElementById('allUsersList').innerHTML = html;
+                document.getElementById('allUsersList').innerHTML = html || "No users found.";
             });
 
-            // 3. Withdrawals & Deposits List
             db.collection("withdrawals").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
                     let w = doc.data();
                     html += `
-                        <p><b>Withdrawal Request</b></p>
-                        <p>UPI: <b>${w.upi}</b> | Amt: ₹${w.amount} | Status: ${w.status}</p>
-                        <button class="btn btn-green" onclick="markRequestSuccess('withdrawals', '${doc.id}')">Mark Successful</button>
+                        <p>Withdrawal | UPI: <b>${w.upi}</b> | Amt: ₹${w.amount} | Status: ${w.status}</p>
+                        <button class="btn btn-green" onclick="markWithdrawalSuccess('${doc.id}')">Mark Successful & Pay</button>
                         <hr style="border-color:#30363d">
                     `;
                 });
-                
-                // Also check deposits if any
-                db.collection("withdrawals_or_deposits").get().then(depSnap => {
-                    let depHtml = "";
-                    depSnap.forEach(doc => {
-                        let d = doc.data();
-                        depHtml += `
-                            <p><b>Deposit Request (${d.email})</b></p>
-                            <p>Amt: ₹${d.amount} | UTR: <b>${d.utr}</b> | Status: ${d.status}</p>
-                            <button class="btn btn-green" onclick="approveDeposit('${doc.id}', '${d.userId}', ${d.amount})">Approve & Add Coins</button>
-                            <hr style="border-color:#30363d">
-                        `;
-                    });
-                    document.getElementById('requestsList').innerHTML = html + depHtml || "<p>No pending requests.</p>";
-                });
+                document.getElementById('requestsList').innerHTML = html || "<p>No withdrawal requests.</p>";
             });
         }
 
@@ -212,37 +180,23 @@
         }
 
         function deleteMatch(id) {
-            if(confirm("Are you sure you want to delete this match?")) {
-                db.collection("matches").doc(id).delete().then(() => alert("Match Deleted!"));
+            if(confirm("Are you sure?")) {
+                db.collection("matches").doc(id).delete().then(() => alert("Deleted!"));
             }
         }
 
-        function markRequestSuccess(col, id) {
-            db.collection(col).doc(id).update({ status: "Success (Paid)" }).then(() => {
+        function markWithdrawalSuccess(id) {
+            db.collection("withdrawals").doc(id).update({ status: "Success (Paid)" }).then(() => {
                 alert("Marked as Successful!");
             });
         }
 
-        function approveDeposit(docId, userId, amount) {
-            db.collection("users").doc(userId).get().then(doc => {
-                let currentWallet = 0;
-                if(doc.exists) {
-                    currentWallet = doc.data().wallet || 0;
-                }
-                let newWallet = currentWallet + amount;
-                db.collection("users").doc(userId).update({ wallet: newWallet }).then(() => {
-                    db.collection("withdrawals_or_deposits").doc(docId).update({ status: "Approved" }).then(() => {
-                        alert("Deposit approved and coins added to user wallet!");
-                    });
-                });
-            });
-        }
-
+        // Fixed Add Coins Functionality
         function updateUserCoins(uid) {
-            let inputVal = document.getElementById(`add-mail-${uid}` || `add-amt-${uid}`).value;
+            let inputVal = document.getElementById(`add-amt-${uid}`).value;
             let amountToAdd = Number(inputVal);
-            if(isNaN(amountToAdd)) {
-                alert("Please enter a valid number!");
+            if(!amountToAdd) {
+                alert("Please enter a valid amount!");
                 return;
             }
 
@@ -251,7 +205,7 @@
                     let currentWallet = doc.data().wallet || 0;
                     let newWallet = currentWallet + amountToAdd;
                     db.collection("users").doc(uid).update({ wallet: newWallet }).then(() => {
-                        alert("User coins updated successfully!");
+                        alert("Coins updated successfully!");
                         document.getElementById(`add-amt-${uid}`).value = "";
                     });
                 }
