@@ -39,17 +39,18 @@
             <input type="text" id="mId" placeholder="Match ID">
             <input type="number" id="mFee" placeholder="Entry Fee">
             <input type="number" id="mPrize" placeholder="Win Prize">
-            <input type="number" id="mSlots" placeholder="Max Seats / Slots (e.g. 60)">
+            <input type="number" id="mSlots" placeholder="Max Slots / Slots (e.g. 60)">
             <input type="text" id="mWinRate" placeholder="Win Rate (e.g. 75%)">
             <input type="text" id="mTime" placeholder="Match Time">
             <input type="text" id="mPhoto" placeholder="Match Photo Link">
-            <input type="text" id="mRoom" placeholder="Room ID & Password">
+            <!-- Shuru mein ise khali ya 'Pending' chhod sakte hain -->
+            <input type="text" id="mRoom" placeholder="Room ID & Password (Optional)">
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
 
-        <!-- Manage Matches -->
+        <!-- Manage Matches & Update Room ID/Password Later -->
         <div class="box">
-            <h3>Active Matches Control</h3>
+            <h3>Active Matches Control & Room ID Setup</h3>
             <div id="adminMatchesList">Loading matches...</div>
         </div>
 
@@ -133,10 +134,17 @@
                 let html = "";
                 snapshot.forEach(doc => {
                     let m = doc.data();
+                    let docId = doc.id;
                     html += `
-                        <p><b>${m.title}</b> (ID: ${m.matchId}) | Max Slots: ${m.maxSlots || 60}</p>
-                        <button class="btn btn-green" onclick="markComplete('${doc.id}')">Mark Complete</button>
-                        <button class="btn btn-red" onclick="deleteMatch('${doc.id}')">Delete Match</button>
+                        <div class="user-card">
+                            <p><b>${m.title}</b> (ID: ${m.matchId}) | Max Slots: ${m.maxSlots || 60}</p>
+                            <p><b>Current Room Details:</b> ${m.roomDetails || 'Pending'}</p>
+                            <input type="text" id="room-input-${docId}" placeholder="Enter Room ID & Password" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" style="margin:4px 0;">
+                            <button class="btn btn-green" onclick="updateRoomDetails('${docId}')">Update Room ID / Password</button>
+                            <br><br>
+                            <button class="btn btn-green" onclick="markComplete('${docId}')">Mark Complete</button>
+                            <button class="btn btn-red" onclick="deleteMatch('${docId}')">Delete Match</button>
+                        </div>
                         <hr style="border-color:#30363d">
                     `;
                 });
@@ -175,8 +183,23 @@
             });
         }
 
+        // Bane huye match mein Room ID & Password update karne ka naya function
+        function updateRoomDetails(docId) {
+            let newRoomDetails = document.getElementById(`room-input-${docId}`).value;
+            if(!newRoomDetails) {
+                alert("Please enter Room ID and Password!");
+                return;
+            }
+
+            db.collection("matches").doc(docId).update({
+                roomDetails: newRoomDetails
+            }).then(() => {
+                alert("Room ID & Password Updated Successfully!");
+            }).catch(err => alert(err.message));
+        }
+
         function markComplete(id) {
-            db.collection("matches").doc(id).update({ status: "completed" }).then(() => alert("Match completed!"));
+            db.collection("matches").doc(id).update({ status: "completed" }).then(() => alert("Marked complete!"));
         }
 
         function deleteMatch(id) {
@@ -191,7 +214,6 @@
             });
         }
 
-        // Fixed Add Coins Functionality
         function updateUserCoins(uid) {
             let inputVal = document.getElementById(`add-amt-${uid}`).value;
             let amountToAdd = Number(inputVal);
