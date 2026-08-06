@@ -43,7 +43,6 @@
             <input type="text" id="mWinRate" placeholder="Win Rate (e.g. 75%)">
             <input type="text" id="mTime" placeholder="Match Time">
             <input type="text" id="mPhoto" placeholder="Match Photo Link">
-            <!-- Shuru mein ise khali ya 'Pending' chhod sakte hain -->
             <input type="text" id="mRoom" placeholder="Room ID & Password (Optional)">
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
@@ -173,9 +172,13 @@
                 let html = "";
                 snapshot.forEach(doc => {
                     let w = doc.data();
+                    let wId = doc.id;
                     html += `
-                        <p>Withdrawal | UPI: <b>${w.upi}</b> | Amt: ₹${w.amount} | Status: ${w.status}</p>
-                        <button class="btn btn-green" onclick="markWithdrawalSuccess('${doc.id}')">Mark Successful & Pay</button>
+                        <div class="user-card">
+                            <p>Withdrawal | UPI: <b>${w.upi}</b> | Amt: ₹${w.amount} | Status: ${w.status}</p>
+                            <button class="btn btn-green" onclick="markWithdrawalSuccess('${wId}')">Mark Successful & Pay</button>
+                            <button class="btn btn-red" onclick="deleteWithdrawal('${wId}')">Delete Request</button>
+                        </div>
                         <hr style="border-color:#30363d">
                     `;
                 });
@@ -183,7 +186,6 @@
             });
         }
 
-        // Bane huye match mein Room ID & Password update karne ka naya function
         function updateRoomDetails(docId) {
             let newRoomDetails = document.getElementById(`room-input-${docId}`).value;
             if(!newRoomDetails) {
@@ -212,6 +214,15 @@
             db.collection("withdrawals").doc(id).update({ status: "Success (Paid)" }).then(() => {
                 alert("Marked as Successful!");
             });
+        }
+
+        // Withdrawal history/request delete karne ka naya function
+        function deleteWithdrawal(id) {
+            if(confirm("Are you sure you want to delete this withdrawal request?")) {
+                db.collection("withdrawals").doc(id).delete().then(() => {
+                    alert("Withdrawal Request Deleted!");
+                }).catch(err => alert(err.message));
+            }
         }
 
         function updateUserCoins(uid) {
