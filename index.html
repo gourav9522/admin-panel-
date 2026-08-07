@@ -7,7 +7,7 @@
     <style>
         body { background: #0b0e14; color: #fff; font-family: Arial, sans-serif; padding: 15px; margin: 0; }
         .box { background: #161b22; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #30363d; }
-        input, button, select { width: 100%; padding: 10px; margin: 6px 0; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: #fff; box-sizing: border-box; }
+        input, button { width: 100%; padding: 10px; margin: 6px 0; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: #fff; box-sizing: border-box; }
         .btn { background: #d29922; color: #000; font-weight: bold; cursor: pointer; }
         .btn-green { background: #2ea44f; color: #fff; }
         .btn-red { background: #da3633; color: #fff; }
@@ -32,40 +32,45 @@
             <button class="btn btn-green" onclick="updateBanner()">Update Banner</button>
         </div>
 
-        <!-- Create Match with Seats Limit -->
+        <!-- Monthly Event Video Setup -->
         <div class="box">
-            <h3>Create Match (Seat Limit Added)</h3>
-            <input type="text" id="mTitle" placeholder="Match Title (e.g. 1v1 Custom)">
+            <h3>Manage Monthly Event Video Link</h3>
+            <input type="text" id="eventVideoUrlInput" placeholder="Enter Monthly Event Video URL (Embed Link)">
+            <button class="btn btn-green" onclick="updateEventVideo()">Update Event Video Link</button>
+        </div>
+
+        <!-- Create Match -->
+        <div class="box">
+            <h3>Create Match</h3>
+            <input type="text" id="mTitle" placeholder="Match Title (e.g. Free Fire 1v1)">
             <input type="text" id="mId" placeholder="Match ID">
             <input type="number" id="mFee" placeholder="Entry Fee">
             <input type="number" id="mPrize" placeholder="Win Prize">
-            <input type="number" id="mSlots" placeholder="Max Slots / Slots (e.g. 60)">
-            <input type="text" id="mWinRate" placeholder="Win Rate (e.g. 75%)">
+            <input type="number" id="mSlots" placeholder="Max Slots (e.g. 60)">
             <input type="text" id="mTime" placeholder="Match Time">
-            <input type="text" id="mPhoto" placeholder="Match Photo Link">
             <input type="text" id="mRoom" placeholder="Room ID & Password (Optional)">
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
 
-        <!-- Manage Matches & Update Room ID/Password Later -->
+        <!-- Active Matches Control -->
         <div class="box">
             <h3>Active Matches Control & Room ID Setup</h3>
             <div id="adminMatchesList">Loading matches...</div>
         </div>
 
-        <!-- ALL USERS MANAGEMENT -->
+        <!-- Users Management -->
         <div class="box">
             <h3>Registered Users & Coin Management</h3>
             <div id="allUsersList">Loading users...</div>
         </div>
 
-        <!-- Manage Add Money / Deposit Requests -->
+        <!-- Deposit / Add Money Requests -->
         <div class="box">
             <h3>Deposit / Add Money Requests (History)</h3>
             <div id="depositsList">Loading deposit requests...</div>
         </div>
 
-        <!-- Manage Withdrawals -->
+        <!-- Withdrawal Requests -->
         <div class="box">
             <h3>Withdrawal Requests (History)</h3>
             <div id="requestsList">Loading withdrawal requests...</div>
@@ -110,13 +115,17 @@
             });
         }
 
+        function updateEventVideo() {
+            let url = document.getElementById('eventVideoUrlInput').value;
+            db.collection("settings").doc("config").set({ monthlyVideoUrl: url }, { merge: true }).then(() => {
+                alert("Monthly Video URL Updated!");
+            });
+        }
+
         function createMatch() {
             let title = document.getElementById('mTitle').value;
             let matchId = document.getElementById('mId').value;
-            if(!title || !matchId) {
-                alert("Please fill Match Title and Match ID!");
-                return;
-            }
+            if(!title || !matchId) { alert("Fill Match Title and ID!"); return; }
 
             db.collection("matches").add({
                 title: title,
@@ -124,187 +133,123 @@
                 entryFee: Number(document.getElementById('mFee').value) || 0,
                 prize: Number(document.getElementById('mPrize').value) || 0,
                 maxSlots: Number(document.getElementById('mSlots').value) || 60,
-                winRate: document.getElementById('mWinRate').value || "50%",
                 time: document.getElementById('mTime').value || "Soon",
-                photoUrl: document.getElementById('mPhoto').value || "",
                 roomDetails: document.getElementById('mRoom').value || "Pending",
                 status: "active"
-            }).then(() => {
-                alert("Match Created Successfully with Seat Limit!");
-            }).catch(err => alert(err.message));
+            }).then(() => alert("Match Created Successfully!"));
         }
 
         function loadAdminData() {
-            // Matches List
+            db.collection("settings").doc("config").get().then(doc => {
+                if(doc.exists) {
+                    if(doc.data().bannerUrl) document.getElementById('bannerUrlInput').value = doc.data().bannerUrl;
+                    if(doc.data().monthlyVideoUrl) document.getElementById('eventVideoUrlInput').value = doc.data().monthlyVideoUrl;
+                }
+            });
+
+            // Matches
             db.collection("matches").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
-                    let m = doc.data();
-                    let docId = doc.id;
+                    let m = doc.data(); let id = doc.id;
                     html += `
                         <div class="user-card">
-                            <p><b>${m.title}</b> (ID: ${m.matchId}) | Max Slots: ${m.maxSlots || 60}</p>
-                            <p><b>Current Room Details:</b> ${m.roomDetails || 'Pending'}</p>
-                            <input type="text" id="room-input-${docId}" placeholder="Enter Room ID & Password" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" style="margin:4px 0;">
-                            <button class="btn btn-green" onclick="updateRoomDetails('${docId}')">Update Room ID / Password</button>
-                            <br><br>
-                            <button class="btn btn-green" onclick="markComplete('${docId}')">Mark Complete</button>
-                            <button class="btn btn-red" onclick="deleteMatch('${docId}')">Delete Match</button>
+                            <p><b>${m.title}</b> (ID: ${m.matchId})</p>
+                            <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
+                            <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
+                            <button class="btn btn-red" onclick="deleteMatch('${id}')">Delete Match</button>
                         </div>
-                        <hr style="border-color:#30363d">
                     `;
                 });
                 document.getElementById('adminMatchesList').innerHTML = html || "<p>No matches.</p>";
             });
 
-            // Users List
+            // Users
             db.collection("users").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
-                    let u = doc.data();
-                    let uid = doc.id;
+                    let u = doc.data(); let id = doc.id;
                     html += `
                         <div class="user-card">
-                            <p><b>Name:</b> ${u.name || 'N/A'}</p>
-                            <p><b>Email:</b> ${u.email}</p>
-                            <p><b>Coins/Wallet:</b> ₹<span id="wallet-${uid}">${u.wallet || 0}</span></p>
-                            <input type="number" id="add-amt-${uid}" placeholder="Enter coins to add" style="margin:4px 0;">
-                            <button class="btn btn-green" onclick="updateUserCoins('${uid}')">Add Coins</button>
+                            <p><b>Name:</b> ${u.name || 'User'} | Wallet: ₹${u.wallet || 0}</p>
+                            <input type="number" id="coin-${id}" placeholder="Add/Remove Coins">
+                            <button class="btn btn-green" onclick="updateCoins('${id}')">Update Coins</button>
                         </div>
                     `;
                 });
-                document.getElementById('allUsersList').innerHTML = html || "No users found.";
+                document.getElementById('allUsersList').innerHTML = html || "<p>No users.</p>";
             });
 
-            // Deposit Requests List (Add Money History with Username, Amount, and UTR)
+            // Deposits
             db.collection("withdrawals_or_deposits").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
-                    let d = doc.data();
-                    let dId = doc.id;
+                    let d = doc.data(); let id = doc.id;
                     if(d.type === "DEPOSIT") {
-                        let userName = d.userName || d.name || "Unknown User";
-                        let userEmail = d.email || "No Email";
                         html += `
                             <div class="user-card">
-                                <p><b>User Name:</b> <span style="color:#d29922;">${userName}</span></p>
-                                <p><b>Email:</b> ${userEmail}</p>
-                                <p><b>Amount:</b> ₹<b>${d.amount}</b> | <b>Payment/UTR ID:</b> <b style="color:var(--gold);">${d.utr}</b></p>
-                                <p><b>Status:</b> ${d.status || 'Pending'}</p>
-                                <button class="btn btn-green" onclick="approveDeposit('${dId}', '${d.userId}', ${d.amount})">Approve & Add Coins</button>
-                                <button class="btn btn-red" onclick="deleteDeposit('${dId}')">Delete History</button>
+                                <p><b>User:</b> ${d.userName} | Amount: ₹<b>${d.amount}</b> | UTR: <b style="color:#d29922;">${d.utr}</b></p>
+                                <p>Status: ${d.status}</p>
+                                <button class="btn btn-green" onclick="approveDeposit('${id}', '${d.userId}', ${d.amount})">Approve & Add Coins</button>
+                                <button class="btn btn-red" onclick="deleteDoc('withdrawals_or_deposits', '${id}')">Delete Request</button>
                             </div>
-                            <hr style="border-color:#30363d">
                         `;
                     }
                 });
-                document.getElementById('depositsList').innerHTML = html || "<p>No deposit requests found.</p>";
+                document.getElementById('depositsList').innerHTML = html || "<p>No deposit requests.</p>";
             });
 
-            // Withdrawal Requests List
+            // Withdrawals
             db.collection("withdrawals").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
-                    let w = doc.data();
-                    let wId = doc.id;
-                    let wUserName = w.userName || w.name || "User";
+                    let w = doc.data(); let id = doc.id;
                     html += `
                         <div class="user-card">
-                            <p><b>User Name:</b> <span style="color:#d29922;">${wUserName}</span></p>
-                            <p><b>Withdrawal UPI:</b> <b>${w.upi}</b> | <b>Amount:</b> ₹${w.amount} | <b>Status:</b> ${w.status || 'Pending'}</p>
-                            <button class="btn btn-green" onclick="markWithdrawalSuccess('${wId}')">Mark Successful & Pay</button>
-                            <button class="btn btn-red" onclick="deleteWithdrawal('${wId}')">Delete History</button>
+                            <p><b>User:</b> ${w.userName} | UPI: <b>${w.upi}</b> | Amount: ₹${w.amount}</p>
+                            <p>Status: ${w.status}</p>
+                            <button class="btn btn-green" onclick="markPaid('${id}')">Mark Paid</button>
+                            <button class="btn btn-red" onclick="deleteDoc('withdrawals', '${id}')">Delete Request</button>
                         </div>
-                        <hr style="border-color:#30363d">
                     `;
                 });
-                document.getElementById('requestsList').innerHTML = html || "<p>No withdrawal requests found.</p>";
+                document.getElementById('requestsList').innerHTML = html || "<p>No withdrawal requests.</p>";
             });
         }
 
-        // Deposit Approve and Coin Add Function
-        function approveDeposit(dId, userId, amount) {
-            db.collection("users").doc(userId).get().then(doc => {
-                if(doc.exists) {
-                    let currentWallet = doc.data().wallet || 0;
-                    let newWallet = currentWallet + amount;
-                    
-                    db.collection("users").doc(userId).update({ wallet: newWallet }).then(() => {
-                        db.collection("withdrawals_or_deposits").doc(dId).update({ status: "Approved (Coins Added)" }).then(() => {
-                            alert("Deposit Approved and Coins Added Successfully!");
-                        });
-                    });
-                } else {
-                    alert("User account not found!");
-                }
-            });
-        }
-
-        // Delete Deposit Request History
-        function deleteDeposit(dId) {
-            if(confirm("Are you sure you want to delete this deposit history?")) {
-                db.collection("withdrawals_or_deposits").doc(dId).delete().then(() => {
-                    alert("Deposit History Deleted!");
-                }).catch(err => alert(err.message));
-            }
-        }
-
-        function updateRoomDetails(docId) {
-            let newRoomDetails = document.getElementById(`room-input-${docId}`).value;
-            if(!newRoomDetails) {
-                alert("Please enter Room ID and Password!");
-                return;
-            }
-
-            db.collection("matches").doc(docId).update({
-                roomDetails: newRoomDetails
-            }).then(() => {
-                alert("Room ID & Password Updated Successfully!");
-            }).catch(err => alert(err.message));
-        }
-
-        function markComplete(id) {
-            db.collection("matches").doc(id).update({ status: "completed" }).then(() => alert("Marked complete!"));
+        function updateRoom(id) {
+            let val = document.getElementById(`room-${id}`).value;
+            db.collection("matches").doc(id).update({ roomDetails: val }).then(() => alert("Room Updated!"));
         }
 
         function deleteMatch(id) {
-            if(confirm("Are you sure?")) {
-                db.collection("matches").doc(id).delete().then(() => alert("Deleted!"));
-            }
+            if(confirm("Delete match?")) db.collection("matches").doc(id).delete();
         }
 
-        function markWithdrawalSuccess(id) {
-            db.collection("withdrawals").doc(id).update({ status: "Success (Paid)" }).then(() => {
-                alert("Marked as Successful!");
+        function updateCoins(id) {
+            let amt = Number(document.getElementById(`coin-${id}`).value);
+            db.collection("users").doc(id).get().then(doc => {
+                let cur = doc.exists ? (doc.data().wallet || 0) : 0;
+                db.collection("users").doc(id).update({ wallet: cur + amt }).then(() => alert("Coins Updated!"));
             });
         }
 
-        function deleteWithdrawal(id) {
-            if(confirm("Are you sure you want to delete this withdrawal history?")) {
-                db.collection("withdrawals").doc(id).delete().then(() => {
-                    alert("Withdrawal History Deleted!");
-                }).catch(err => alert(err.message));
-            }
+        function approveDeposit(dId, userId, amt) {
+            db.collection("users").doc(userId).get().then(doc => {
+                let cur = doc.exists ? (doc.data().wallet || 0) : 0;
+                db.collection("users").doc(userId).update({ wallet: cur + amt }).then(() => {
+                    db.collection("withdrawals_or_deposits").doc(dId).update({ status: "Approved" });
+                    alert("Deposit Approved & Coins Added!");
+                });
+            });
         }
 
-        function updateUserCoins(uid) {
-            let inputVal = document.getElementById(`add-amt-${uid}`).value;
-            let amountToAdd = Number(inputVal);
-            if(!amountToAdd) {
-                alert("Please enter a valid amount!");
-                return;
-            }
+        function markPaid(id) {
+            db.collection("withdrawals").doc(id).update({ status: "Paid" }).then(() => alert("Marked Paid!"));
+        }
 
-            db.collection("users").doc(uid).get().then(doc => {
-                if(doc.exists) {
-                    let currentWallet = doc.data().wallet || 0;
-                    let newWallet = currentWallet + amountToAdd;
-                    db.collection("users").doc(uid).update({ wallet: newWallet }).then(() => {
-                        alert("Coins updated successfully!");
-                        document.getElementById(`add-amt-${uid}`).value = "";
-                    });
-                }
-            });
+        function deleteDoc(col, id) {
+            if(confirm("Delete this request?")) db.collection(col).doc(id).delete();
         }
     </script>
 </body>
