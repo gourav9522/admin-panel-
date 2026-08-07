@@ -12,6 +12,7 @@
         .btn-green { background: #2ea44f; color: #fff; }
         .btn-red { background: #da3633; color: #fff; }
         .user-card { background: #21262d; padding: 10px; margin-top: 8px; border-radius: 5px; border: 1px solid #30363d; }
+        .joined-user-box { background: #0d1117; padding: 8px; margin: 5px 0; border-radius: 4px; font-size: 13px; border: 1px solid #30363d; }
     </style>
 </head>
 <body>
@@ -54,7 +55,7 @@
 
         <!-- Active Matches Control -->
         <div class="box">
-            <h3>Active Matches Control & Room ID Setup</h3>
+            <h3>Active Matches Control & Joined Users</h3>
             <div id="adminMatchesList">Loading matches...</div>
         </div>
 
@@ -147,17 +148,34 @@
                 }
             });
 
-            // Matches
+            // Matches & Joined Users list
             db.collection("matches").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
                     let m = doc.data(); let id = doc.id;
+                    
+                    // Fetching joined users for this match
+                    db.collection("matches").doc(id).collection("joinedUsers").onSnapshot(userSnap => {
+                        let joinedHtml = "<b>Joined Players:</b><br>";
+                        if(userSnap.empty) {
+                            joinedHtml += "<span style='color:gray;'>No players joined yet.</span>";
+                        } else {
+                            userSnap.forEach(uDoc => {
+                                let uData = uDoc.data();
+                                joinedHtml += `<div class="joined-user-box">👤 <b>Name:</b> ${uData.username || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</div>`;
+                            });
+                        }
+                        let container = document.getElementById(`joined-list-${id}`);
+                        if(container) container.innerHTML = joinedHtml;
+                    });
+
                     html += `
                         <div class="user-card">
                             <p><b>${m.title}</b> (ID: ${m.matchId})</p>
                             <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
                             <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
                             <button class="btn btn-red" onclick="deleteMatch('${id}')">Delete Match</button>
+                            <div id="joined-list-${id}" style="margin-top: 10px; border-top: 1px dashed #30363d; padding-top: 8px;">Loading joined users...</div>
                         </div>
                     `;
                 });
