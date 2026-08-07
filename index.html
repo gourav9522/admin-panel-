@@ -148,38 +148,45 @@
                 }
             });
 
-            // Matches & Joined Users list
-            db.collection("matches").onSnapshot(snapshot => {
-                let html = "";
-                snapshot.forEach(doc => {
-                    let m = doc.data(); let id = doc.id;
-                    
-                    // Fetching joined users for this match
-                    db.collection("matches").doc(id).collection("joinedUsers").onSnapshot(userSnap => {
-                        let joinedHtml = "<b>Joined Players:</b><br>";
-                        if(userSnap.empty) {
-                            joinedHtml += "<span style='color:gray;'>No players joined yet.</span>";
-                        } else {
-                            userSnap.forEach(uDoc => {
-                                let uData = uDoc.data();
-                                joinedHtml += `<div class="joined-user-box">👤 <b>Name:</b> ${uData.username || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</div>`;
-                            });
+            // Load Matches and Joined Users from 'joins' collection
+            db.collection("matches").onSnapshot(matchSnapshot => {
+                db.collection("joins").onSnapshot(joinsSnapshot => {
+                    let joinsMap = {};
+                    joinsSnapshot.forEach(jDoc => {
+                        let jData = jDoc.data();
+                        if(!joinsMap[jData.matchId]) {
+                            joinsMap[jData.matchId] = [];
                         }
-                        let container = document.getElementById(`joined-list-${id}`);
-                        if(container) container.innerHTML = joinedHtml;
+                        joinsMap[jData.matchId].push(jData);
                     });
 
-                    html += `
-                        <div class="user-card">
-                            <p><b>${m.title}</b> (ID: ${m.matchId})</p>
-                            <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
-                            <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
-                            <button class="btn btn-red" onclick="deleteMatch('${id}')">Delete Match</button>
-                            <div id="joined-list-${id}" style="margin-top: 10px; border-top: 1px dashed #30363d; padding-top: 8px;">Loading joined users...</div>
-                        </div>
-                    `;
+                    let html = "";
+                    matchSnapshot.forEach(doc => {
+                        let m = doc.data(); 
+                        let id = doc.id;
+                        let matchJoins = joinsMap[id] || [];
+
+                        let joinedHtml = "<b>Joined Players:</b><br>";
+                        if(matchJoins.length === 0) {
+                            joinedHtml += "<span style='color:gray;'>No players joined yet.</span>";
+                        } else {
+                            matchJoins.forEach(uData => {
+                                joinedHtml += `<div class="joined-user-box">👤 <b>Name:</b> ${uData.userName || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</div>`;
+                            });
+                        }
+
+                        html += `
+                            <div class="user-card">
+                                <p><b>${m.title}</b> (ID: ${m.matchId})</p>
+                                <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
+                                <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
+                                <button class="btn btn-red" onclick="deleteMatch('${id}')">Delete Match</button>
+                                <div style="margin-top: 10px; border-top: 1px dashed #30363d; padding-top: 8px;">${joinedHtml}</div>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('adminMatchesList').innerHTML = html || "<p>No matches.</p>";
                 });
-                document.getElementById('adminMatchesList').innerHTML = html || "<p>No matches.</p>";
             });
 
             // Users
