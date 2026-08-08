@@ -53,15 +53,23 @@
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
 
-        <!-- Active Matches Control -->
+        <!-- Active Matches Control (Button to Toggle) -->
         <div class="box">
             <h3>Active Matches Control & Joined Users</h3>
-            <div id="adminMatchesList">Loading matches...</div>
+            <button class="btn" onclick="toggleMatches()">Show / Hide Active Matches</button>
+            <div id="adminMatchesList" style="display:none; margin-top: 10px;">Loading matches...</div>
         </div>
 
-        <!-- Users Management -->
+        <!-- Withdrawal Requests (Moved Above Users) -->
+        <div class="box">
+            <h3>Withdrawal Requests (History)</h3>
+            <div id="requestsList">Loading withdrawal requests...</div>
+        </div>
+
+        <!-- Users Management with Search Bar -->
         <div class="box">
             <h3>Registered Users & Coin Management</h3>
+            <input type="text" id="userSearchInput" placeholder="Search user by name..." onkeyup="filterUsers()">
             <div id="allUsersList">Loading users...</div>
         </div>
 
@@ -69,12 +77,6 @@
         <div class="box">
             <h3>Deposit / Add Money Requests (History)</h3>
             <div id="depositsList">Loading deposit requests...</div>
-        </div>
-
-        <!-- Withdrawal Requests -->
-        <div class="box">
-            <h3>Withdrawal Requests (History)</h3>
-            <div id="requestsList">Loading withdrawal requests...</div>
         </div>
     </div>
 
@@ -98,6 +100,8 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        let allUsersData = []; // Store users for searching
+
         function checkAdmin() {
             let pass = document.getElementById('adminPass').value;
             if(pass === "9522") {
@@ -106,6 +110,15 @@
                 loadAdminData();
             } else {
                 alert("Wrong Password!");
+            }
+        }
+
+        function toggleMatches() {
+            let listDiv = document.getElementById('adminMatchesList');
+            if (listDiv.style.display === 'none') {
+                listDiv.style.display = 'block';
+            } else {
+                listDiv.style.display = 'none';
             }
         }
 
@@ -189,20 +202,30 @@
                 });
             });
 
-            // Users
+            // Users with Search Support
             db.collection("users").onSnapshot(snapshot => {
+                allUsersData = [];
+                snapshot.forEach(doc => {
+                    allUsersData.push({ id: doc.id, data: doc.data() });
+                });
+                renderUsers(allUsersData);
+            });
+
+            // Withdrawals (Moved Above)
+            db.collection("withdrawals").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
-                    let u = doc.data(); let id = doc.id;
+                    let w = doc.data(); let id = doc.id;
                     html += `
                         <div class="user-card">
-                            <p><b>Name:</b> ${u.name || 'User'} | Wallet: ₹${u.wallet || 0}</p>
-                            <input type="number" id="coin-${id}" placeholder="Add/Remove Coins">
-                            <button class="btn btn-green" onclick="updateCoins('${id}')">Update Coins</button>
+                            <p><b>User:</b> ${w.userName} | UPI: <b>${w.upi}</b> | Amount: ₹${w.amount}</p>
+                            <p>Status: ${w.status}</p>
+                            <button class="btn btn-green" onclick="markPaid('${id}')">Mark Paid</button>
+                            <button class="btn btn-red" onclick="deleteDoc('withdrawals', '${id}')">Delete Request</button>
                         </div>
                     `;
                 });
-                document.getElementById('allUsersList').innerHTML = html || "<p>No users.</p>";
+                document.getElementById('requestsList').innerHTML = html || "<p>No withdrawal requests.</p>";
             });
 
             // Deposits
@@ -223,23 +246,31 @@
                 });
                 document.getElementById('depositsList').innerHTML = html || "<p>No deposit requests.</p>";
             });
+        }
 
-            // Withdrawals
-            db.collection("withdrawals").onSnapshot(snapshot => {
-                let html = "";
-                snapshot.forEach(doc => {
-                    let w = doc.data(); let id = doc.id;
-                    html += `
-                        <div class="user-card">
-                            <p><b>User:</b> ${w.userName} | UPI: <b>${w.upi}</b> | Amount: ₹${w.amount}</p>
-                            <p>Status: ${w.status}</p>
-                            <button class="btn btn-green" onclick="markPaid('${id}')">Mark Paid</button>
-                            <button class="btn btn-red" onclick="deleteDoc('withdrawals', '${id}')">Delete Request</button>
-                        </div>
-                    `;
-                });
-                document.getElementById('requestsList').innerHTML = html || "<p>No withdrawal requests.</p>";
+        function renderUsers(users) {
+            let html = "";
+            users.forEach(userObj => {
+                let u = userObj.data; 
+                let id = userObj.id;
+                html += `
+                    <div class="user-card">
+                        <p><b>Name:</b> ${u.name || 'User'} | Wallet: ₹${u.wallet || 0}</p>
+                        <input type="number" id="coin-${id}" placeholder="Add/Remove Coins">
+                        <button class="btn btn-green" onclick="updateCoins('${id}')">Update Coins</button>
+                    </div>
+                `;
             });
+            document.getElementById('allUsersList').innerHTML = html || "<p>No users found.</p>";
+        }
+
+        function filterUsers() {
+            let query = document.getElementById('userSearchInput').value.toLowerCase();
+            let filtered = allUsersData.filter(userObj => {
+                let name = (userObj.data.name || '').toLowerCase();
+                return name.includes(query);
+            });
+            renderUsers(filtered);
         }
 
         function updateRoom(id) {
