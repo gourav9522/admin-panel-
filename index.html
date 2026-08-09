@@ -60,7 +60,7 @@
             <div id="adminMatchesList" style="display:none; margin-top: 10px;">Loading matches...</div>
         </div>
 
-        <!-- Withdrawal Requests (Moved Above Users) -->
+        <!-- Withdrawal Requests -->
         <div class="box">
             <h3>Withdrawal Requests (History)</h3>
             <div id="requestsList">Loading withdrawal requests...</div>
@@ -115,11 +115,7 @@
 
         function toggleMatches() {
             let listDiv = document.getElementById('adminMatchesList');
-            if (listDiv.style.display === 'none') {
-                listDiv.style.display = 'block';
-            } else {
-                listDiv.style.display = 'none';
-            }
+            listDiv.style.display = listDiv.style.display === 'none' ? 'block' : 'none';
         }
 
         function updateBanner() {
@@ -150,7 +146,8 @@
                 time: document.getElementById('mTime').value || "Soon",
                 roomDetails: document.getElementById('mRoom').value || "Pending",
                 status: "active",
-                winnerName: ""
+                winnerName: "",
+                winnerUserId: ""
             }).then(() => alert("Match Created Successfully!"));
         }
 
@@ -184,12 +181,12 @@
                             joinedHtml += "<span style='color:gray;'>No players joined yet.</span>";
                         } else {
                             matchJoins.forEach(uData => {
-                                let isWinner = m.winnerName === uData.userName ? "checked" : "";
+                                let isWinner = m.winnerUserId === uData.userId ? "checked" : "";
                                 joinedHtml += `
                                     <div class="joined-user-box">
                                         <span>👤 <b>Name:</b> ${uData.userName || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</span>
                                         <label style="cursor:pointer; color:#2ea44f; font-weight:bold;">
-                                            <input type="radio" name="winner-${id}" value="${uData.userName}" ${isWinner} onchange="setWinner('${id}', '${uData.userName}')"> 🏆 Winner
+                                            <input type="radio" name="winner-${id}" value="${uData.userId}" ${isWinner} onchange="setWinnerAndPrize('${id}', '${uData.userId}', '${uData.userName}', ${m.prize})"> 🏆 Winner
                                         </label>
                                     </div>`;
                             });
@@ -199,13 +196,13 @@
 
                         html += `
                             <div class="user-card">
-                                <p><b>${m.title}</b> (ID: ${m.matchId})</p>
+                                <p><b>${m.title}</b> (ID: ${m.matchId}) - Prize: ₹${m.prize}</p>
                                 <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
                                 <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
                                 
                                 <div style="margin: 8px 0; background: #0d1117; padding: 8px; border-radius: 4px;">
                                     <label style="cursor:pointer; color: #da3633; font-weight: bold;">
-                                        <input type="checkbox" ${isCompletedChecked} onchange="toggleMatchComplete('${id}', this)"> Mark Match as Complete (Close & Show Winner)
+                                        <input type="checkbox" ${isCompletedChecked} onchange="toggleMatchComplete('${id}', this)"> Mark Match as Complete (Close Match)
                                     </label>
                                     <p style="margin:4px 0 0 0; font-size:12px; color:#8b949e;">Winner Selected: <b style="color:var(--gold);">${m.winnerName || 'None'}</b></p>
                                 </div>
@@ -262,9 +259,21 @@
             });
         }
 
-        function setWinner(matchDocId, winnerName) {
-            db.collection("matches").doc(matchDocId).update({ winnerName: winnerName }).then(() => {
-                alert(`Winner updated to: ${winnerName}`);
+        function setWinnerAndPrize(matchDocId, userId, userName, prizeAmount) {
+            // Update match winner details
+            db.collection("matches").doc(matchDocId).update({ 
+                winnerName: userName, 
+                winnerUserId: userId,
+                status: "completed"
+            }).then(() => {
+                // Automatically add winning prize to winner's wallet
+                db.collection("users").doc(userId).get().then(userDoc => {
+                    let currentWallet = userDoc.exists ? (userDoc.data().wallet || 0) : 0;
+                    let newWallet = currentWallet + prizeAmount;
+                    db.collection("users").doc(userId).update({ wallet: newWallet }).then(() => {
+                        alert(`Winner set to ${userName} and ₹${prizeAmount} added to their wallet successfully!`);
+                    });
+                });
             });
         }
 
