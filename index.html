@@ -7,12 +7,12 @@
     <style>
         body { background: #0b0e14; color: #fff; font-family: Arial, sans-serif; padding: 15px; margin: 0; }
         .box { background: #161b22; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #30363d; }
-        input, button { width: 100%; padding: 10px; margin: 6px 0; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: #fff; box-sizing: border-box; }
+        input, button, select { width: 100%; padding: 10px; margin: 6px 0; border-radius: 5px; border: 1px solid #30363d; background: #0d1117; color: #fff; box-sizing: border-box; }
         .btn { background: #d29922; color: #000; font-weight: bold; cursor: pointer; }
         .btn-green { background: #2ea44f; color: #fff; }
         .btn-red { background: #da3633; color: #fff; }
         .user-card { background: #21262d; padding: 10px; margin-top: 8px; border-radius: 5px; border: 1px solid #30363d; }
-        .joined-user-box { background: #0d1117; padding: 8px; margin: 5px 0; border-radius: 4px; font-size: 13px; border: 1px solid #30363d; }
+        .joined-user-box { background: #0d1117; padding: 8px; margin: 5px 0; border-radius: 4px; font-size: 13px; border: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
@@ -100,7 +100,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let allUsersData = []; // Store users for searching
+        let allUsersData = [];
 
         function checkAdmin() {
             let pass = document.getElementById('adminPass').value;
@@ -149,7 +149,8 @@
                 maxSlots: Number(document.getElementById('mSlots').value) || 60,
                 time: document.getElementById('mTime').value || "Soon",
                 roomDetails: document.getElementById('mRoom').value || "Pending",
-                status: "active"
+                status: "active",
+                winnerName: ""
             }).then(() => alert("Match Created Successfully!"));
         }
 
@@ -161,7 +162,6 @@
                 }
             });
 
-            // Load Matches and Joined Users from 'joins' collection
             db.collection("matches").onSnapshot(matchSnapshot => {
                 db.collection("joins").onSnapshot(joinsSnapshot => {
                     let joinsMap = {};
@@ -179,20 +179,37 @@
                         let id = doc.id;
                         let matchJoins = joinsMap[id] || [];
 
-                        let joinedHtml = "<b>Joined Players:</b><br>";
+                        let joinedHtml = "<b>Joined Players (Select Winner):</b><br>";
                         if(matchJoins.length === 0) {
                             joinedHtml += "<span style='color:gray;'>No players joined yet.</span>";
                         } else {
                             matchJoins.forEach(uData => {
-                                joinedHtml += `<div class="joined-user-box">👤 <b>Name:</b> ${uData.userName || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</div>`;
+                                let isWinner = m.winnerName === uData.userName ? "checked" : "";
+                                joinedHtml += `
+                                    <div class="joined-user-box">
+                                        <span>👤 <b>Name:</b> ${uData.userName || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</span>
+                                        <label style="cursor:pointer; color:#2ea44f; font-weight:bold;">
+                                            <input type="radio" name="winner-${id}" value="${uData.userName}" ${isWinner} onchange="setWinner('${id}', '${uData.userName}')"> 🏆 Winner
+                                        </label>
+                                    </div>`;
                             });
                         }
+
+                        let isCompletedChecked = m.status === "completed" ? "checked" : "";
 
                         html += `
                             <div class="user-card">
                                 <p><b>${m.title}</b> (ID: ${m.matchId})</p>
                                 <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
                                 <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
+                                
+                                <div style="margin: 8px 0; background: #0d1117; padding: 8px; border-radius: 4px;">
+                                    <label style="cursor:pointer; color: #da3633; font-weight: bold;">
+                                        <input type="checkbox" ${isCompletedChecked} onchange="toggleMatchComplete('${id}', this)"> Mark Match as Complete (Close & Show Winner)
+                                    </label>
+                                    <p style="margin:4px 0 0 0; font-size:12px; color:#8b949e;">Winner Selected: <b style="color:var(--gold);">${m.winnerName || 'None'}</b></p>
+                                </div>
+
                                 <button class="btn btn-red" onclick="deleteMatch('${id}')">Delete Match</button>
                                 <div style="margin-top: 10px; border-top: 1px dashed #30363d; padding-top: 8px;">${joinedHtml}</div>
                             </div>
@@ -202,7 +219,6 @@
                 });
             });
 
-            // Users with Search Support
             db.collection("users").onSnapshot(snapshot => {
                 allUsersData = [];
                 snapshot.forEach(doc => {
@@ -211,7 +227,6 @@
                 renderUsers(allUsersData);
             });
 
-            // Withdrawals (Moved Above)
             db.collection("withdrawals").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
@@ -228,7 +243,6 @@
                 document.getElementById('requestsList').innerHTML = html || "<p>No withdrawal requests.</p>";
             });
 
-            // Deposits
             db.collection("withdrawals_or_deposits").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
@@ -245,6 +259,19 @@
                     }
                 });
                 document.getElementById('depositsList').innerHTML = html || "<p>No deposit requests.</p>";
+            });
+        }
+
+        function setWinner(matchDocId, winnerName) {
+            db.collection("matches").doc(matchDocId).update({ winnerName: winnerName }).then(() => {
+                alert(`Winner updated to: ${winnerName}`);
+            });
+        }
+
+        function toggleMatchComplete(matchDocId, checkbox) {
+            let newStatus = checkbox.checked ? "completed" : "active";
+            db.collection("matches").doc(matchDocId).update({ status: newStatus }).then(() => {
+                alert(checkbox.checked ? "Match marked as Completed!" : "Match reactivated!");
             });
         }
 
