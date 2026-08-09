@@ -147,7 +147,8 @@
                 roomDetails: document.getElementById('mRoom').value || "Pending",
                 status: "active",
                 winnerName: "",
-                winnerUserId: ""
+                winnerUserId: "",
+                winnerStatusText: "Completed"
             }).then(() => alert("Match Created Successfully!"));
         }
 
@@ -260,16 +261,17 @@
         }
 
         function setWinnerAndPrize(matchDocId, userId, userName, prizeAmount) {
-            // Update match winner details
+            // Update match winner details and status with completed banner text
             db.collection("matches").doc(matchDocId).update({ 
                 winnerName: userName, 
                 winnerUserId: userId,
-                status: "completed"
+                status: "completed",
+                winnerStatusText: "Completed"
             }).then(() => {
-                // Automatically add winning prize to winner's wallet
+                // Automatically add winning prize to winner's wallet securely
                 db.collection("users").doc(userId).get().then(userDoc => {
                     let currentWallet = userDoc.exists ? (userDoc.data().wallet || 0) : 0;
-                    let newWallet = currentWallet + prizeAmount;
+                    let newWallet = currentWallet + Number(prizeAmount);
                     db.collection("users").doc(userId).update({ wallet: newWallet }).then(() => {
                         alert(`Winner set to ${userName} and ₹${prizeAmount} added to their wallet successfully!`);
                     });
@@ -279,7 +281,11 @@
 
         function toggleMatchComplete(matchDocId, checkbox) {
             let newStatus = checkbox.checked ? "completed" : "active";
-            db.collection("matches").doc(matchDocId).update({ status: newStatus }).then(() => {
+            let updateData = { status: newStatus };
+            if (checkbox.checked) {
+                updateData.winnerStatusText = "Completed";
+            }
+            db.collection("matches").doc(matchDocId).update(updateData).then(() => {
                 alert(checkbox.checked ? "Match marked as Completed!" : "Match reactivated!");
             });
         }
