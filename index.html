@@ -43,9 +43,9 @@
         <!-- Create Daily Task / Offer Setup -->
         <div class="box">
             <h3>🎯 Create Daily Task / Offer</h3>
-            <input type="text" id="taskTitle" placeholder="Task Title (e.g. Watch Video & Earn)">
+            <input type="text" id="taskTitle" placeholder="Task Title (e.g. Download App X)">
             <textarea id="taskDesc" placeholder="Task Short Description / Instructions" rows="2"></textarea>
-            <input type="text" id="taskVideoTarget" placeholder="Video Link or Target ID (e.g. watch?v=XYZ)">
+            <input type="text" id="taskLink" placeholder="Offer Link / CPAlead URL">
             <input type="number" id="taskReward" placeholder="Coin Reward (e.g. 10)">
             <button class="btn btn-green" onclick="createTask()">Publish Task</button>
             <div id="adminTasksList" style="margin-top: 10px;">Loading tasks...</div>
@@ -146,29 +146,25 @@
         function createTask() {
             let title = document.getElementById('taskTitle').value;
             let description = document.getElementById('taskDesc').value;
-            let videoTarget = document.getElementById('taskVideoTarget').value;
+            let link = document.getElementById('taskLink').value;
             let reward = Number(document.getElementById('taskReward').value);
 
-            if(!title || !videoTarget || !reward) {
-                alert("Please fill Task Title, Video Target/Link, and Reward!");
+            if(!title || !link || !reward) {
+                alert("Please fill Task Title, Link, and Reward!");
                 return;
             }
-
-            // Permanent Intent Link Generation with package: netprime.aplztwe and fallback blog
-            let fallbackUrl = encodeURIComponent("https://net-prime-blogspot.com/?m=1"); // Encoded blog link
-            let intentLink = `intent://${videoTarget}#Intent;scheme=myapp;package=netprime.aplztwe;S.browser_fallback_url=${encodeURIComponent("https://net-prime-apk.blogspot.com/?m=1")};end;`;
 
             db.collection("tasks").add({
                 title: title,
                 description: description,
-                link: intentLink,
+                link: link,
                 reward: reward,
                 createdAt: Date.now()
             }).then(() => {
-                alert("Task Created Successfully with Smart Intent Link!");
+                alert("Task Created Successfully!");
                 document.getElementById('taskTitle').value = "";
                 document.getElementById('taskDesc').value = "";
-                document.getElementById('taskVideoTarget').value = "";
+                document.getElementById('taskLink').value = "";
                 document.getElementById('taskReward').value = "";
             }).catch(e => alert(e.message));
         }
