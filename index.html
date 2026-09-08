@@ -53,27 +53,27 @@
 
         <!-- Create Match -->
         <div class="box">
-            <h3>Create Match</h3>
-            <input type="text" id="mTitle" placeholder="Match Title (e.g. Free Fire 1v1)">
+            <h3>Create Match (Solo / Duo / Squad)</h3>
+            <input type="text" id="mTitle" placeholder="Match Title (e.g. Free Fire Full Map)">
             <input type="text" id="mId" placeholder="Match ID">
             <input type="number" id="mFee" placeholder="Entry Fee">
             <input type="number" id="mPrize" placeholder="Win Prize">
             <input type="number" id="mSlots" placeholder="Max Slots (e.g. 60)">
             
-            <!-- Match Type Selection Added -->
-            <label style="font-size:12px; color:#8b949e; display:block; text-align:left; margin-top:4px;">Match Type:</label>
+            <!-- Match Type / Mode Selection (Solo, Duo, Squad) -->
+            <label style="font-size:12px; color:#d29922; display:block; text-align:left; margin-top:4px; font-weight:bold;">Select Match Mode (Solo / Duo / Squad):</label>
             <select id="mType">
-                <option value="solo">Solo</option>
-                <option value="duo">Duo</option>
-                <option value="squad">Squad</option>
+                <option value="solo">Solo (अकेले)</option>
+                <option value="duo">Duo (दो खिलाड़ी)</option>
+                <option value="squad">Squad (चार खिलाड़ी)</option>
                 <option value="lone wolf">Lone Wolf</option>
                 <option value="battle royal">Battle Royale</option>
                 <option value="headshot">Headshot 1v1 & 2v2</option>
                 <option value="classic squad">Classic Squad</option>
             </select>
 
-            <!-- Updated Match Date & Time Input -->
-            <label style="font-size:12px; color:#8b949e; display:block; text-align:left; margin-top:4px;">Match Date & Time:</label>
+            <!-- Match Date & Time Input -->
+            <label style="font-size:12px; color:#2ea44f; display:block; text-align:left; margin-top:4px; font-weight:bold;">Match Date & Time:</label>
             <input type="datetime-local" id="mTime">
 
             <input type="text" id="mRoom" placeholder="Room ID & Password (Optional)">
@@ -199,7 +199,6 @@
 
             if(!title || !matchId) { alert("Fill Match Title and ID!"); return; }
 
-            // Format datetime-local to a cleaner readable format (e.g. 10 Mar 2026, 05:00 PM)
             let matchTimeFormatted = "Soon";
             if(rawDateTime) {
                 let dt = new Date(rawDateTime);
@@ -226,7 +225,7 @@
                 winnerName: "",
                 winnerUserId: "",
                 winnerStatusText: "Completed"
-            }).then(() => alert("Match Created Successfully with Date & Time!"));
+            }).then(() => alert("Match Created Successfully with Mode & Date/Time!"));
         }
 
         function loadAdminData() {
@@ -292,7 +291,7 @@
 
                         html += `
                             <div class="user-card">
-                                <p><b>${m.title}</b> (ID: ${m.matchId}) [Type: <b>${(m.matchType || 'solo').toUpperCase()}</b>] - Prize: ₹${m.prize}</p>
+                                <p><b>${m.title}</b> (ID: ${m.matchId}) [Mode: <b style="color:#d29922;">${(m.matchType || 'solo').toUpperCase()}</b>] - Prize: ₹${m.prize}</p>
                                 <p style="font-size:12px; color:#2ea44f; margin:2px 0;">📅 Date & Time: <b>${m.time || 'Soon'}</b></p>
                                 <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
                                 <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
