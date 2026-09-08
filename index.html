@@ -72,7 +72,10 @@
                 <option value="classic squad">Classic Squad</option>
             </select>
 
-            <input type="text" id="mTime" placeholder="Match Time (e.g. 05:00 PM)">
+            <!-- Updated Match Date & Time Input -->
+            <label style="font-size:12px; color:#8b949e; display:block; text-align:left; margin-top:4px;">Match Date & Time:</label>
+            <input type="datetime-local" id="mTime">
+
             <input type="text" id="mRoom" placeholder="Room ID & Password (Optional)">
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
@@ -192,9 +195,23 @@
             let title = document.getElementById('mTitle').value;
             let matchId = document.getElementById('mId').value;
             let matchType = document.getElementById('mType').value;
-            let matchTime = document.getElementById('mTime').value;
+            let rawDateTime = document.getElementById('mTime').value;
 
             if(!title || !matchId) { alert("Fill Match Title and ID!"); return; }
+
+            // Format datetime-local to a cleaner readable format (e.g. 10 Mar 2026, 05:00 PM)
+            let matchTimeFormatted = "Soon";
+            if(rawDateTime) {
+                let dt = new Date(rawDateTime);
+                matchTimeFormatted = dt.toLocaleString('en-IN', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+            }
 
             db.collection("matches").add({
                 title: title,
@@ -203,13 +220,13 @@
                 entryFee: Number(document.getElementById('mFee').value) || 0,
                 prize: Number(document.getElementById('mPrize').value) || 0,
                 maxSlots: Number(document.getElementById('mSlots').value) || 60,
-                time: matchTime || "Soon",
+                time: matchTimeFormatted,
                 roomDetails: document.getElementById('mRoom').value || "Pending",
                 status: "active",
                 winnerName: "",
                 winnerUserId: "",
                 winnerStatusText: "Completed"
-            }).then(() => alert("Match Created Successfully with Match Type & Time!"));
+            }).then(() => alert("Match Created Successfully with Date & Time!"));
         }
 
         function loadAdminData() {
@@ -220,7 +237,6 @@
                 }
             });
 
-            // Load Tasks inside Admin Panel
             db.collection("tasks").onSnapshot(snapshot => {
                 let html = "";
                 snapshot.forEach(doc => {
@@ -277,7 +293,7 @@
                         html += `
                             <div class="user-card">
                                 <p><b>${m.title}</b> (ID: ${m.matchId}) [Type: <b>${(m.matchType || 'solo').toUpperCase()}</b>] - Prize: ₹${m.prize}</p>
-                                <p style="font-size:12px; color:#8b949e; margin:2px 0;">Time: ${m.time || 'Soon'}</p>
+                                <p style="font-size:12px; color:#2ea44f; margin:2px 0;">📅 Date & Time: <b>${m.time || 'Soon'}</b></p>
                                 <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
                                 <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
                                 
