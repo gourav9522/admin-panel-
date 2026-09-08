@@ -59,7 +59,20 @@
             <input type="number" id="mFee" placeholder="Entry Fee">
             <input type="number" id="mPrize" placeholder="Win Prize">
             <input type="number" id="mSlots" placeholder="Max Slots (e.g. 60)">
-            <input type="text" id="mTime" placeholder="Match Time">
+            
+            <!-- Match Type Selection Added -->
+            <label style="font-size:12px; color:#8b949e; display:block; text-align:left; margin-top:4px;">Match Type:</label>
+            <select id="mType">
+                <option value="solo">Solo</option>
+                <option value="duo">Duo</option>
+                <option value="squad">Squad</option>
+                <option value="lone wolf">Lone Wolf</option>
+                <option value="battle royal">Battle Royale</option>
+                <option value="headshot">Headshot 1v1 & 2v2</option>
+                <option value="classic squad">Classic Squad</option>
+            </select>
+
+            <input type="text" id="mTime" placeholder="Match Time (e.g. 05:00 PM)">
             <input type="text" id="mRoom" placeholder="Room ID & Password (Optional)">
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
@@ -178,21 +191,25 @@
         function createMatch() {
             let title = document.getElementById('mTitle').value;
             let matchId = document.getElementById('mId').value;
+            let matchType = document.getElementById('mType').value;
+            let matchTime = document.getElementById('mTime').value;
+
             if(!title || !matchId) { alert("Fill Match Title and ID!"); return; }
 
             db.collection("matches").add({
                 title: title,
                 matchId: matchId,
+                matchType: matchType,
                 entryFee: Number(document.getElementById('mFee').value) || 0,
                 prize: Number(document.getElementById('mPrize').value) || 0,
                 maxSlots: Number(document.getElementById('mSlots').value) || 60,
-                time: document.getElementById('mTime').value || "Soon",
+                time: matchTime || "Soon",
                 roomDetails: document.getElementById('mRoom').value || "Pending",
                 status: "active",
                 winnerName: "",
                 winnerUserId: "",
                 winnerStatusText: "Completed"
-            }).then(() => alert("Match Created Successfully!"));
+            }).then(() => alert("Match Created Successfully with Match Type & Time!"));
         }
 
         function loadAdminData() {
@@ -247,7 +264,7 @@
                                 let isWinner = m.winnerUserId === uData.userId ? "checked" : "";
                                 joinedHtml += `
                                     <div class="joined-user-box">
-                                        <span>👤 <b>Name:</b> ${uData.userName || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'}</span>
+                                        <span>👤 <b>Name:</b> ${uData.userName || 'N/A'} | 🆔 <b>FF ID:</b> ${uData.ffId || 'N/A'} ${uData.ffId2 ? ' / ' + uData.ffId2 : ''} ${uData.teamType ? '('+uData.teamType+')' : ''}</span>
                                         <label style="cursor:pointer; color:#2ea44f; font-weight:bold;">
                                             <input type="radio" name="winner-${id}" value="${uData.userId}" ${isWinner} onchange="setWinnerAndPrize('${id}', '${uData.userId}', '${uData.userName}', ${m.prize})"> 🏆 Winner
                                         </label>
@@ -259,7 +276,8 @@
 
                         html += `
                             <div class="user-card">
-                                <p><b>${m.title}</b> (ID: ${m.matchId}) - Prize: ₹${m.prize}</p>
+                                <p><b>${m.title}</b> (ID: ${m.matchId}) [Type: <b>${(m.matchType || 'solo').toUpperCase()}</b>] - Prize: ₹${m.prize}</p>
+                                <p style="font-size:12px; color:#8b949e; margin:2px 0;">Time: ${m.time || 'Soon'}</p>
                                 <input type="text" id="room-${id}" value="${m.roomDetails !== 'Pending' ? m.roomDetails : ''}" placeholder="Room ID & Pass">
                                 <button class="btn btn-green" onclick="updateRoom('${id}')">Update Room</button>
                                 
