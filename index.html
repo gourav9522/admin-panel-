@@ -51,6 +51,13 @@
             <div id="adminTasksList" style="margin-top: 10px;">Loading tasks...</div>
         </div>
 
+        <!-- Task Screenshot Submissions Control -->
+        <div class="box">
+            <h3>📸 Task Screenshot Submissions</h3>
+            <button class="btn" onclick="toggleTaskSubs()">Show / Hide Task Screenshots</button>
+            <div id="adminTaskSubsList" style="display:none; margin-top: 10px;">Loading task screenshots...</div>
+        </div>
+
         <!-- Create Match -->
         <div class="box">
             <h3>Create Match (Solo / Duo / Squad)</h3>
@@ -142,6 +149,11 @@
 
         function toggleMatches() {
             let listDiv = document.getElementById('adminMatchesList');
+            listDiv.style.display = listDiv.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleTaskSubs() {
+            let listDiv = document.getElementById('adminTaskSubsList');
             listDiv.style.display = listDiv.style.display === 'none' ? 'block' : 'none';
         }
 
@@ -252,6 +264,30 @@
                     `;
                 });
                 document.getElementById('adminTasksList').innerHTML = html || "<p style='font-size:12px; color:#8b949e;'>No tasks created yet.</p>";
+            });
+
+            // Task Screenshot Submissions listener
+            db.collection("task_submissions").onSnapshot(snapshot => {
+                let html = "";
+                snapshot.forEach(doc => {
+                    let sub = doc.data();
+                    let subId = doc.id;
+                    if(sub.status !== "Approved") {
+                        html += `
+                            <div class="user-card">
+                                <p>👤 <b>User:</b> ${sub.userName || 'N/A'} (ID: ${sub.userId || 'N/A'})</p>
+                                <p>🎯 <b>Task:</b> ${sub.taskTitle || 'Task'} | 💰 <b>Reward:</b> ₹${sub.reward || 0}</p>
+                                ${sub.screenshotUrl ? `<a href="${sub.screenshotUrl}" target="_blank"><img src="${sub.screenshotUrl}" style="max-width:140px; border-radius:5px; margin:5px 0; border:1px solid #30363d; display:block;" alt="Screenshot"></a>` : '<p style="color:#da3633;">No screenshot uploaded</p>'}
+                                <div style="margin-top:8px;">
+                                    <label style="cursor:pointer; color:#2ea44f; font-weight:bold;">
+                                        <input type="checkbox" onchange="approveTaskSubmission('${subId}', '${sub.userId}', ${sub.reward || 0}, this)"> ✅ Tick to Approve & Add Reward
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                document.getElementById('adminTaskSubsList').innerHTML = html || "<p style='font-size:12px; color:#8b949e;'>No pending task screenshots.</p>";
             });
 
             db.collection("matches").onSnapshot(matchSnapshot => {
@@ -367,6 +403,19 @@
                     let newWallet = currentWallet + Number(prizeAmount);
                     db.collection("users").doc(userId).update({ wallet: newWallet }).then(() => {
                         alert(`Winner set to ${userName} and ₹${prizeAmount} added to their wallet successfully!`);
+                    });
+                });
+            });
+        }
+
+        function approveTaskSubmission(subId, userId, rewardAmount, checkbox) {
+            if(!checkbox.checked) return;
+            db.collection("users").doc(userId).get().then(userDoc => {
+                let currentWallet = userDoc.exists ? (userDoc.data().wallet || 0) : 0;
+                let newWallet = currentWallet + Number(rewardAmount);
+                db.collection("users").doc(userId).update({ wallet: newWallet }).then(() => {
+                    db.collection("task_submissions").doc(subId).update({ status: "Approved" }).then(() => {
+                        alert(`Task Approved! ₹${rewardAmount} added to user's wallet.`);
                     });
                 });
             });
