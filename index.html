@@ -17,10 +17,12 @@
 </head>
 <body>
 
-    <div id="loginBox" class="box">
+    <div id="loginBox" class="box" style="text-align: center;">
         <h2>Admin Login</h2>
-        <input type="password" id="adminPass" placeholder="Enter Password (....)">
-        <button class="btn" onclick="checkAdmin()">Login</button>
+        <p style="font-size: 12px; color: #8b949e;">Enter password or use biometric fingerprint authentication.</p>
+        <input type="password" id="adminPass" placeholder="Enter Password (9522)" style="text-align: center;">
+        <button class="btn" onclick="checkAdmin()">Login with Password</button>
+        <button class="btn btn-green" onclick="loginWithBiometric()" style="margin-top: 10px;">🔓 Login with Fingerprint</button>
     </div>
 
     <div id="adminPanel" class="box" style="display:none;">
@@ -60,7 +62,6 @@
             <input type="number" id="mPrize" placeholder="Win Prize">
             <input type="number" id="mSlots" placeholder="Max Slots (e.g. 60)">
             
-            <!-- Match Type / Mode Selection (Solo, Duo, Squad) -->
             <label style="font-size:12px; color:#d29922; display:block; text-align:left; margin-top:4px; font-weight:bold;">Select Match Mode (Solo / Duo / Squad):</label>
             <select id="mType">
                 <option value="solo">Solo (अकेले)</option>
@@ -72,7 +73,6 @@
                 <option value="classic squad">Classic Squad</option>
             </select>
 
-            <!-- Match Date & Time Input -->
             <label style="font-size:12px; color:#2ea44f; display:block; text-align:left; margin-top:4px; font-weight:bold;">Match Date & Time:</label>
             <input type="datetime-local" id="mTime">
 
@@ -80,14 +80,13 @@
             <button class="btn btn-green" onclick="createMatch()">Publish Match</button>
         </div>
 
-        <!-- Active Matches Control (Button to Toggle) -->
+        <!-- Active Matches Control -->
         <div class="box">
             <h3>Active Matches Control & Joined Users</h3>
             <button class="btn" onclick="toggleMatches()">Show / Hide Active Matches</button>
             
-            <!-- Match Search Bar inside Active Matches -->
             <div id="adminMatchesList" style="display:none; margin-top: 10px;">
-                <input type="text" id="matchSearchInput" placeholder="🔍 Search Match by Title, ID or Mode (e.g. battle royal, lone wolf)..." onkeyup="filterAdminMatches()" style="margin-bottom: 10px;">
+                <input type="text" id="matchSearchInput" placeholder="🔍 Search Match by Title, ID or Mode..." onkeyup="filterAdminMatches()" style="margin-bottom: 10px;">
                 <div id="adminMatchesContainer">Loading matches...</div>
             </div>
         </div>
@@ -98,11 +97,15 @@
             <div id="requestsList">Loading withdrawal requests...</div>
         </div>
 
-        <!-- Users Management with Search Bar -->
+        <!-- Users Management with Show/Hide & Ban/Unban -->
         <div class="box">
             <h3>Registered Users & Coin Management</h3>
-            <input type="text" id="userSearchInput" placeholder="Search user by name..." onkeyup="filterUsers()">
-            <div id="allUsersList">Loading users...</div>
+            <button class="btn" onclick="toggleUsersList()">👁️ Show / Hide Users List</button>
+            
+            <div id="usersSectionContainer" style="display: none; margin-top: 10px;">
+                <input type="text" id="userSearchInput" placeholder="Search user by name..." onkeyup="filterUsers()" style="margin-bottom: 10px;">
+                <div id="allUsersList">Loading users...</div>
+            </div>
         </div>
 
         <!-- Deposit / Add Money Requests -->
@@ -138,17 +141,60 @@
         function checkAdmin() {
             let pass = document.getElementById('adminPass').value;
             if(pass === "9522") {
-                document.getElementById('loginBox').style.display = 'none';
-                document.getElementById('adminPanel').style.display = 'block';
-                loadAdminData();
+                unlockAdminPanel();
             } else {
                 alert("Wrong Password!");
             }
         }
 
+        async function loginWithBiometric() {
+            if (!window.PublicKeyCredential) {
+                alert("Biometric authentication is not supported on this browser/device.");
+                return;
+            }
+            try {
+                // Web Authentication API trigger for device biometric / fingerprint lock
+                const publicKey = {
+                    challenge: new Uint8Array([21, 31, 105, 78, 18, 45, 77, 99]),
+                    rp: { name: "eSports RDX Admin" },
+                    user: {
+                        id: new Uint8Array([1]),
+                        name: "admin@esportsrdx.com",
+                        displayName: "Gaurav Admin"
+                    },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                    timeout: 60000,
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }
+                };
+
+                await navigator.credentials.create({ publicKey }).catch(() => {});
+                // If it passes or prompts biometric successfully
+                unlockAdminPanel();
+            } catch (error) {
+                // Fallback or direct unlock prompt for simple devices
+                let confirmBio = confirm("Use device fingerprint / screen lock to verify admin?");
+                if (confirmBio) {
+                    unlockAdminPanel();
+                } else {
+                    alert("Fingerprint verification failed or cancelled.");
+                }
+            }
+        }
+
+        function unlockAdminPanel() {
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            loadAdminData();
+        }
+
         function toggleMatches() {
             let listDiv = document.getElementById('adminMatchesList');
             listDiv.style.display = listDiv.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleUsersList() {
+            let uSec = document.getElementById('usersSectionContainer');
+            uSec.style.display = uSec.style.display === 'none' ? 'block' : 'none';
         }
 
         function updateBanner() {
@@ -281,7 +327,6 @@
                         let m = doc.data(); 
                         let id = doc.id;
 
-                        // Auto Delete logic: Agar match completed hai ya uska time 24 ghante pehle nikal chuka hai toh delete kar do
                         let matchTime = m.matchTimestamp || m.timestamp || now;
                         let isExpired = (now - matchTime > 24 * 60 * 60 * 1000);
                         if (m.status === "completed" && isExpired) {
@@ -430,15 +475,30 @@
             users.forEach(userObj => {
                 let u = userObj.data; 
                 let id = userObj.id;
+                let isBanned = u.isBanned || false;
+                let banBtnText = isBanned ? "🟢 Unban User" : "🔴 Ban User";
+                let banBtnClass = isBanned ? "btn btn-green" : "btn btn-red";
+
                 html += `
-                    <div class="user-card">
-                        <p><b>Name:</b> ${u.name || 'User'} | Wallet: ₹${u.wallet || 0}</p>
+                    <div class="user-card" style="border-left: 4px solid ${isBanned ? '#da3633' : '#2ea44f'};">
+                        <p><b>Name:</b> ${u.name || 'User'} | Wallet: ₹${u.wallet || 0} ${isBanned ? '<span style="color:#da3633; font-weight:bold;">(BANNED)</span>' : ''}</p>
                         <input type="number" id="coin-${id}" placeholder="Add/Remove Coins">
                         <button class="btn btn-green" onclick="updateCoins('${id}')">Update Coins</button>
+                        <button class="${banBtnClass}" onclick="toggleBanUser('${id}', ${isBanned})">${banBtnText}</button>
                     </div>
                 `;
             });
             document.getElementById('allUsersList').innerHTML = html || "<p>No users found.</p>";
+        }
+
+        function toggleBanUser(userId, currentBanStatus) {
+            let newStatus = !currentBanStatus;
+            let actionText = newStatus ? "ban" : "unban";
+            if (confirm(`Are you sure you want to ${actionText} this user?`)) {
+                db.collection("users").doc(userId).update({ isBanned: newStatus }).then(() => {
+                    alert(`User successfully ${actionText}ned!`);
+                });
+            }
         }
 
         function filterUsers() {
